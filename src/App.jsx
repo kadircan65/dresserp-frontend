@@ -1,143 +1,101 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API = import.meta.env.VITE_API_URL;
 
 export default function App() {
-  const [name, setName] = useState("");
-const [price, setPrice] = useState("");
+  const [products, setProducts] = useState([]);
 
-const [size, setSize] = useState("");
-const [color, setColor] = useState("");
-const [category, setCategory] = useState("");
-const [stock, setStock] = useState(1);
-const [deposit, setDeposit] = useState(0);
-const [imageUrl, setImageUrl] = useState("");
-const [notes, setNotes] = useState("");
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+
+  // ekstra alanlar (istersen kullan)
+  const [size, setSize] = useState("");
+  const [color, setColor] = useState("");
+  const [category, setCategory] = useState("");
+  const [stock, setStock] = useState("");
+  const [deposit, setDeposit] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [notes, setNotes] = useState("");
 
   const getProducts = async () => {
     try {
       const res = await fetch(API + "/products");
       if (!res.ok) throw new Error("GET /products failed: " + res.status);
       const data = await res.json();
-      setProducts(data);
+      setProducts(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
       alert("Ürünleri çekerken hata: " + err.message);
     }
   };
 
+  useEffect(() => {
+    getProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const addProduct = async () => {
-    // Basit validation
-   const addProduct = async () => {
-
-  if (!name.trim() || !price.toString().trim()) {
-    alert("Ürün adı ve fiyat zorunlu");
-    return;
-  }
-
-  try {
-
-    const res = await fetch(API + "/products", {
-
-      method: "POST",
-
-      headers: {
-        "Content-Type": "application/json"
-      },
-
-      body: JSON.stringify({
-        name: name.trim(),
-        price: Number(price),
-        size,
-        color,
-        category,
-        stock,
-        deposit,
-        image_url: imageUrl,
-        notes
-      })
-
-    });
-
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(txt);
+    // basic validation
+    if (!name.trim() || !String(price).trim()) {
+      alert("Ürün adı ve fiyat zorunlu");
+      return;
     }
 
-    setName("");
-    setPrice("");
-    await getProducts();
-
-  } catch (err) {
-    alert("Ürün eklenirken hata: " + err.message);
-  }
-};
-
-      // Formu temizle + listeyi yenile
-      setName("");
-      setPrice("");
-      await getProducts();
-    } catch (err) {
-      console.error(err);
-      alert("Ürün eklerken hata: " + err.message);
+    const priceNum = Number(price);
+    if (Number.isNaN(priceNum)) {
+      alert("Fiyat sayısal olmalı");
+      return;
     }
-  };
-<input
-  placeholder="Beden (S/M/L/36/38)"
-  value={size}
-  onChange={(e) => setSize(e.target.value)}
-/>
 
-<input
-  placeholder="Renk"
-  value={color}
-  onChange={(e) => setColor(e.target.value)}
-/>
-
-<input
-  placeholder="Kategori (Nişan / Nikah / Mezuniyet...)"
-  value={category}
-  onChange={(e) => setCategory(e.target.value)}
-/>
-
-<input
-  placeholder="Stok"
-  type="number"
-  value={stock}
-  onChange={(e) => setStock(Number(e.target.value))}
-  min={0}
-/>
-
-<input
-  placeholder="Depozito (TL)"
-  type="number"
-  value={deposit}
-  onChange={(e) => setDeposit(Number(e.target.value))}
-  min={0}
-/>
-
-<input
-  placeholder="Görsel URL (opsiyonel)"
-  value={imageUrl}
-  onChange={(e) => setImageUrl(e.target.value)}
-/>
-
-<input
-  placeholder="Not (opsiyonel)"
-  value={notes}
-  onChange={(e) => setNotes(e.target.value)}
-/>
-  const deleteProduct = async (id) => {
     try {
-      const res = await fetch(API + "/products/" + id, {
-        method: "DELETE",
+      const res = await fetch(API + "/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          price: priceNum,
+          size,
+          color,
+          category,
+          stock: stock === "" ? null : Number(stock),
+          deposit: deposit === "" ? null : Number(deposit),
+          image_url: imageUrl,
+          notes,
+        }),
       });
 
       if (!res.ok) {
         const txt = await res.text();
-        throw new Error("DELETE /products failed: " + res.status + " " + txt);
+        throw new Error(txt || "POST /products failed: " + res.status);
       }
 
+      // reset inputs
+      setName("");
+      setPrice("");
+      setSize("");
+      setColor("");
+      setCategory("");
+      setStock("");
+      setDeposit("");
+      setImageUrl("");
+      setNotes("");
+
+      await getProducts();
+    } catch (err) {
+      console.error(err);
+      alert("Ürün eklenirken hata: " + err.message);
+    }
+  };
+
+  const deleteProduct = async (id) => {
+    if (!id) return;
+
+    try {
+      const res = await fetch(API + `/products/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || "DELETE failed: " + res.status);
+      }
       await getProducts();
     } catch (err) {
       console.error(err);
@@ -145,68 +103,65 @@ const [notes, setNotes] = useState("");
     }
   };
 
-  useEffect(() => {
-    getProducts();
-  }, []);
-
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ padding: 20, fontFamily: "system-ui, Arial" }}>
       <h1>DRESSERP</h1>
-<div>
-  <div style={{ fontWeight: "bold" }}>{p.name}</div>
-  <div>{p.price} TL</div>
-  <div style={{ opacity: 0.8, fontSize: 12 }}>
-    {p.category || "-"} • {p.size || "-"} • {p.color || "-"} • stok: {p.stock ?? 1} • depozito: {p.deposit ?? 0}
-  </div>
 
-  {p.image_url ? (
-    <img
-      src={p.image_url}
-      alt={p.name}
-      style={{ width: 120, height: "auto", marginTop: 8, borderRadius: 8 }}
-    />
-  ) : null}
-</div>
-      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
         <input
           placeholder="Ürün adı"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-
         <input
           placeholder="Fiyat"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
           inputMode="numeric"
         />
-
         <button onClick={addProduct}>Ekle</button>
       </div>
 
-      <hr />
+      {/* İstersen alt alanları açarsın (şimdilik sade) */}
+      {/* 
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+        <input placeholder="Beden (S/M/L/36/38)" value={size} onChange={(e) => setSize(e.target.value)} />
+        <input placeholder="Renk" value={color} onChange={(e) => setColor(e.target.value)} />
+        <input placeholder="Kategori" value={category} onChange={(e) => setCategory(e.target.value)} />
+        <input placeholder="Stok" value={stock} onChange={(e) => setStock(e.target.value)} inputMode="numeric" />
+        <input placeholder="Depozito" value={deposit} onChange={(e) => setDeposit(e.target.value)} inputMode="numeric" />
+        <input placeholder="Resim URL" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
+        <input placeholder="Not" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </div>
+      */}
 
-      <h3>Ürünler</h3>
+      <h2>Ürünler</h2>
 
       {products.length === 0 ? (
         <p>Henüz ürün yok.</p>
       ) : (
-        products.map((p) => (
-          <div
-            key={p.id}
-            style={{
-              display: "flex",
-              gap: 10,
-              alignItems: "center",
-              marginBottom: 6,
-            }}
-          >
-            <div style={{ minWidth: 40 }}>#{p.id}</div>
-            <div style={{ minWidth: 200 }}>{p.name}</div>
-            <div style={{ minWidth: 80 }}>{p.price} TL</div>
-            <button onClick={() => deleteProduct(p.id)}>Sil</button>
-          </div>
-        ))
+        <div style={{ display: "grid", gap: 10 }}>
+          {products.map((p) => (
+            <div
+              key={p.id}
+              style={{
+                border: "1px solid #333",
+                borderRadius: 8,
+                padding: 12,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 700 }}>{p.name}</div>
+                <div>{p.price} TL</div>
+              </div>
+
+              <button onClick={() => deleteProduct(p.id)}>Sil</button>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
