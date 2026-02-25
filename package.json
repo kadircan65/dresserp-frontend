@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
 
-  "scripts": {
+ "scripts": {
   "dev": "vite",
   "build": "vite build",
-  "start": "npx serve -s dist -l tcp://0.0.0.0:$PORT"
+  "preview": "vite preview --host 0.0.0.0 --port 8080",
+  "start": "vite preview --host 0.0.0.0 --port 8080"
 }
 
   "dependencies": {
