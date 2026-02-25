@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-const API = import.meta.env.VITE_API_URL;
+const API = "https://dresserp-backend-production.up.railway.app";
 
 export default function App() {
   const [products, setProducts] = useState([]);
