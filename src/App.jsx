@@ -3,9 +3,16 @@ import { useEffect, useState } from "react";
 const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export default function App() {
-  const [products, setProducts] = useState([]);
   const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
+const [price, setPrice] = useState("");
+
+const [size, setSize] = useState("");
+const [color, setColor] = useState("");
+const [category, setCategory] = useState("");
+const [stock, setStock] = useState(1);
+const [deposit, setDeposit] = useState(0);
+const [imageUrl, setImageUrl] = useState("");
+const [notes, setNotes] = useState("");
 
   const getProducts = async () => {
     try {
@@ -27,16 +34,22 @@ export default function App() {
     }
 
     try {
-      const res = await fetch(API + "/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          // fiyatı sayıya çevir (DB text ise istersen kaldır)
-          price: Number(price),
-        }),
-      });
-
+    const res = await fetch(API + "/products", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    name: name.trim(),
+    price: Number(price),
+    size,
+    color,
+    category,
+    stock,
+    deposit,
+    image_url: imageUrl,
+    notes
+  })
+});
+       
       if (!res.ok) {
         const txt = await res.text();
         throw new Error("POST /products failed: " + res.status + " " + txt);
@@ -51,7 +64,51 @@ export default function App() {
       alert("Ürün eklerken hata: " + err.message);
     }
   };
+<input
+  placeholder="Beden (S/M/L/36/38)"
+  value={size}
+  onChange={(e) => setSize(e.target.value)}
+/>
 
+<input
+  placeholder="Renk"
+  value={color}
+  onChange={(e) => setColor(e.target.value)}
+/>
+
+<input
+  placeholder="Kategori (Nişan / Nikah / Mezuniyet...)"
+  value={category}
+  onChange={(e) => setCategory(e.target.value)}
+/>
+
+<input
+  placeholder="Stok"
+  type="number"
+  value={stock}
+  onChange={(e) => setStock(Number(e.target.value))}
+  min={0}
+/>
+
+<input
+  placeholder="Depozito (TL)"
+  type="number"
+  value={deposit}
+  onChange={(e) => setDeposit(Number(e.target.value))}
+  min={0}
+/>
+
+<input
+  placeholder="Görsel URL (opsiyonel)"
+  value={imageUrl}
+  onChange={(e) => setImageUrl(e.target.value)}
+/>
+
+<input
+  placeholder="Not (opsiyonel)"
+  value={notes}
+  onChange={(e) => setNotes(e.target.value)}
+/>
   const deleteProduct = async (id) => {
     try {
       const res = await fetch(API + "/products/" + id, {
@@ -77,7 +134,21 @@ export default function App() {
   return (
     <div style={{ padding: 20 }}>
       <h1>DRESSERP</h1>
+<div>
+  <div style={{ fontWeight: "bold" }}>{p.name}</div>
+  <div>{p.price} TL</div>
+  <div style={{ opacity: 0.8, fontSize: 12 }}>
+    {p.category || "-"} • {p.size || "-"} • {p.color || "-"} • stok: {p.stock ?? 1} • depozito: {p.deposit ?? 0}
+  </div>
 
+  {p.image_url ? (
+    <img
+      src={p.image_url}
+      alt={p.name}
+      style={{ width: 120, height: "auto", marginTop: 8, borderRadius: 8 }}
+    />
+  ) : null}
+</div>
       <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
         <input
           placeholder="Ürün adı"
