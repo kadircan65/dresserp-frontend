@@ -28,32 +28,50 @@ const [notes, setNotes] = useState("");
 
   const addProduct = async () => {
     // Basit validation
-    if (!name.trim() || !price.toString().trim()) {
-      alert("Ürün adı ve fiyat zorunlu");
-      return;
+   const addProduct = async () => {
+
+  if (!name.trim() || !price.toString().trim()) {
+    alert("Ürün adı ve fiyat zorunlu");
+    return;
+  }
+
+  try {
+
+    const res = await fetch(API + "/products", {
+
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify({
+        name: name.trim(),
+        price: Number(price),
+        size,
+        color,
+        category,
+        stock,
+        deposit,
+        image_url: imageUrl,
+        notes
+      })
+
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt);
     }
 
-    try {
-    const res = await fetch(API + "/products", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    name: name.trim(),
-    price: Number(price),
-    size,
-    color,
-    category,
-    stock,
-    deposit,
-    image_url: imageUrl,
-    notes
-  })
-});
-       
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error("POST /products failed: " + res.status + " " + txt);
-      }
+    setName("");
+    setPrice("");
+    await getProducts();
+
+  } catch (err) {
+    alert("Ürün eklenirken hata: " + err.message);
+  }
+};
 
       // Formu temizle + listeyi yenile
       setName("");
