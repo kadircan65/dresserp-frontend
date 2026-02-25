@@ -1,52 +1,64 @@
-import React, { useEffect, useState } from "react";
-
-// env varsa onu kullan, yoksa Railway URL fallback
-const API =
-  import.meta.env.VITE_API_URL ||
-  "https://dresserp-backend-production.up.railway.app";
+// src/App.jsx
+import { useEffect, useState } from "react";
+import "./App.css";
+import { getProducts, healthCheck } from "./api";
 
 export default function App() {
   const [products, setProducts] = useState([]);
-
-  const getProducts = async () => {
-    try {
-      const res = await fetch(`${API}/products`);
-
-      if (!res.ok) {
-        throw new Error("API response not ok");
-      }
-
-      const data = await res.json();
-
-      if (Array.isArray(data)) {
-        setProducts(data);
-      } else if (data.data) {
-        setProducts(data.data);
-      } else {
-        setProducts([]);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Backend bağlantı hatası");
-    }
-  };
+  const [status, setStatus] = useState("Yükleniyor...");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    getProducts();
+    const run = async () => {
+      setError("");
+      try {
+        // backend ayakta mı?
+        await healthCheck();
+
+        // ürünleri çek
+        const data = await getProducts();
+        setProducts(Array.isArray(data) ? data : []);
+        setStatus("OK");
+      } catch (err) {
+        console.error(err);
+        setStatus("HATA");
+        setError("Backend bağlantı hatası. VITE_API_URL veya /products endpoint kontrol.");
+      }
+    };
+
+    run();
   }, []);
 
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ padding: 24 }}>
       <h1>DRESSERP</h1>
 
-      {products.length === 0 && <p>Ürün yok</p>}
+      <p>
+        Durum: <b>{status}</b>
+      </p>
 
-      {products.map((p) => (
-        <div key={p.id}>
-          <h3>{p.name}</h3>
-          <p>{p.price} TL</p>
+      {error && (
+        <div style={{ background: "#2b0a0a", padding: 12, borderRadius: 8 }}>
+          {error}
         </div>
-      ))}
+      )}
+
+      <hr style={{ margin: "16px 0" }} />
+
+      <h2>Ürünler</h2>
+
+      {products.length === 0 ? (
+        <p>Ürün yok</p>
+      ) : (
+        <ul>
+          {products.map((p, i) => (
+            <li key={p.id ?? i}>
+              {p.name ?? p.title ?? "Ürün"}{" "}
+              {p.price ? `- ${p.price}` : ""}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
