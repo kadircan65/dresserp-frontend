@@ -5,10 +5,10 @@
   "type": "module",
 
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "start": "npm run build && npx serve -s dist -l $PORT"
-  },
+  "dev": "vite",
+  "build": "vite build",
+  "start": "npx serve -s dist -l tcp://0.0.0.0:$PORT"
+}
 
   "dependencies": {
     "react": "^19.2.0",
