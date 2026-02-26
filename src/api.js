@@ -1,26 +1,31 @@
-// src/api.js
-const API_URL = import.meta.env.VITE_API_URL;
+const BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-if (!API_URL) {
-  console.warn("VITE_API_URL tanımlı değil. Vercel/Local .env kontrol et.");
-}
+export const healthCheck = async () => {
+  const r = await fetch(`${BASE}/health`);
+  if (!r.ok) throw new Error("Health failed");
+  return r.json();
+};
 
-export async function getProducts() {
-  const res = await fetch(`${API_URL}/products`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
+export const getProducts = async () => {
+  const r = await fetch(`${BASE}/products`);
+  if (!r.ok) throw new Error("Products failed");
+  return r.json();
+};
+
+export const addProduct = async (payload) => {
+  const r = await fetch(`${BASE}/products`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`GET /products failed: ${res.status} ${text}`);
+  const data = await r.json();
+
+  if (!r.ok) {
+    throw new Error(data.error || "Add failed");
   }
 
-  return res.json();
-}
-
-export async function healthCheck() {
-  const res = await fetch(`${API_URL}/health`, { method: "GET" });
-  if (!res.ok) throw new Error(`GET /health failed: ${res.status}`);
-  return res.json();
-}
+  return data;
+};
