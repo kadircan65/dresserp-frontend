@@ -7,25 +7,19 @@ export const healthCheck = async () => {
 };
 
 export const getProducts = async () => {
-  const r = await fetch(`${BASE}/products`);
+  const r = await fetch(`${BASE}/api/products`);
   if (!r.ok) throw new Error("Products failed");
   return r.json();
 };
 
 export const addProduct = async (payload) => {
-  const r = await fetch(`${BASE}/products`, {
+  const r = await fetch(`${BASE}/api/products`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 
   const data = await r.json();
-
-  if (!r.ok) {
-    throw new Error(data.error || "Add failed");
-  }
-
+  if (!r.ok) throw new Error(data.error || "Add failed");
   return data;
 };
