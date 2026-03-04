@@ -1,25 +1,46 @@
-const BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
+// src/api.js
 
-export const healthCheck = async () => {
-  const r = await fetch(`${BASE}/health`);
-  if (!r.ok) throw new Error("Health failed");
-  return r.json();
-};
+const API_BASE = String(import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || "").trim();
 
-export const getProducts = async () => {
-  const r = await fetch(`${BASE}/api/products`);
-  if (!r.ok) throw new Error("Products failed");
-  return r.json();
-};
+function joinUrl(base, path) {
+  const b = String(base || "").replace(/\/+$/, "");
+  const p = String(path || "").replace(/^\/+/, "");
+  return `${b}/${p}`;
+}
 
-export const addProduct = async (payload) => {
-  const r = await fetch(`${BASE}/api/products`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+async function safeText(res) {
+  try {
+    return await res.text();
+  } catch {
+    return "";
+  }
+}
 
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.error || "Add failed");
-  return data;
-};
+export async function healthcheck() {
+  if (!API_BASE) throw new Error("VITE_API_BASE (veya VITE_API_URL) boş.");
+
+  const url = joinUrl(API_BASE, "health");
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    const t = await safeText(res);
+    throw new Error(`Health ${res.status} ${t}`);
+  }
+
+  return true;
+}
+
+export async function getProducts() {
+  if (!API_BASE) throw new Error("VITE_API_BASE (veya VITE_API_URL) boş.");
+
+  const url = joinUrl(API_BASE, "api/products");
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    const t = await safeText(res);
+    throw new Error(`Products ${res.status} ${t}`);
+  }
+
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
