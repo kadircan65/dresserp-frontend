@@ -1,138 +1,175 @@
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 
-const API = import.meta.env.VITE_API_BASE; // örn: https://dresserp-backend.onrender.com
-const WA_NUMBER = import.meta.env.VITE_WHATSAPP_NUMBER; // örn: 905xxxxxxxxx (başında + yok)
-const SITE_URL = import.meta.env.VITE_SITE_URL || window.location.origin;
+const API = import.meta.env.VITE_API_BASE;
+
+function getStoreFromQuery() {
+  const p = new URLSearchParams(window.location.search);
+  return (p.get("store") || "main").trim().toLowerCase();
+}
+
+function formatPrice(value) {
+  const n = Number(value || 0);
+  return n.toLocaleString("tr-TR") + " ₺";
+}
+
+function buildWhatsappLink(number, productName, storeName) {
+  const clean = String(number || "").replace(/\D/g, "");
+  const text = `Merhaba, ${storeName} mağazasındaki "${productName}" ürünü hakkında bilgi almak istiyorum.`;
+  return `https://wa.me/${clean}?text=${encodeURIComponent(text)}`;
+}
 
 export default function App() {
+  const [store] = useState(getStoreFromQuery());
+  const [apiOk, setApiOk] = useState(false);
+
+  const [storeInfo, setStoreInfo] = useState({
+    store_name: "Dresserp Store",
+    whatsapp_number: "",
+  });
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState("");
+  const [msg, setMsg] = useState("");
 
-  const adminUrl = useMemo(() => {
-    // senin admin linkin buysa sabit kalsın, değilse değiştir
-    return "https://dresserp-admin.vercel.app";
-  }, []);
+  const api = (path) => `${API}${path}`;
 
-  function buildWhatsAppLink(p) {
-    const name = p?.name ?? "Ürün";
-    const price = p?.price ?? "";
-    const id = p?.id ?? "";
+  const hasWhatsapp = useMemo(() => {
+    return !!String(storeInfo.whatsapp_number || "").trim();
+  }, [storeInfo.whatsapp_number]);
 
-    const text =
-      `Merhaba, şu ürünü soruyorum:\n` +
-      `• Ürün: ${name}\n` +
-      `• Fiyat: ${price} ₺\n` +
-      `• Ürün Kodu: ${id}\n` +
-      `• Site: ${SITE_URL}`;
+  useEffect(() => {
+    checkApi();
+    loadStore();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store]);
 
-    return `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(text)}`;
-  }
-
-  function openWhatsApp(p) {
-    if (!WA_NUMBER) {
-      alert("WhatsApp numarası tanımlı değil. (VITE_WHATSAPP_NUMBER)");
-      return;
-    }
-    window.open(buildWhatsAppLink(p), "_blank", "noopener,noreferrer");
-  }
-
-  async function fetchProducts() {
+  async function checkApi() {
     try {
-      setLoading(true);
-      setErr("");
+      const r = await fetch(`${API}/health`);
+      setApiOk(r.ok);
+    } catch {
+      setApiOk(false);
+    }
+  }
 
-      if (!API || !API.startsWith("http")) {
-        throw new Error(
-          "VITE_API_BASE hatalı / eksik. .env içinde http ile başlamalı."
-        );
+  async function loadStore() {
+    setLoading(true);
+    setMsg("");
+
+    try {
+      const storeRes = await fetch(api(`/api/s/${store}/store`));
+      const storeData = await storeRes.json();
+
+      if (!storeRes.ok) {
+        setMsg(`Mağaza bulunamadı: ${storeData?.error || storeRes.status}`);
+        setLoading(false);
+        return;
       }
 
-      const res = await fetch(`${API}/api/products`);
-      const text = await res.text();
+      setStoreInfo(storeData);
 
-      if (!res.ok) {
-        throw new Error(`API hata: ${res.status} ${text}`);
+      const prodRes = await fetch(api(`/api/s/${store}/products`));
+      const prodData = await prodRes.json();
+
+      if (!prodRes.ok) {
+        setMsg(`Ürünler alınamadı: ${prodData?.error || prodRes.status}`);
+        setProducts([]);
+        setLoading(false);
+        return;
       }
 
-      const data = JSON.parse(text);
-      setProducts(Array.isArray(data) ? data : []);
-    } catch (e) {
-      setErr(e?.message || "Failed to fetch");
-      setProducts([]);
-    } finally {
+      setProducts(Array.isArray(prodData) ? prodData : []);
+      setLoading(false);
+    } catch {
+      setMsg("Bağlantı hatası oluştu.");
       setLoading(false);
     }
   }
 
-  useEffect(() => {
-    fetchProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   return (
-    <div className="container">
-      <header className="header">
+    <div className="page">
+      <header className="topbar">
         <div>
-          <h1>Dresserp Store</h1>
-          <div className="sub">
-            API: <a href={API}>{API}</a>
-          </div>
+          <h1>{storeInfo.store_name || "Dresserp Store"}</h1>
+          <p className="muted">
+            Mağaza: <b>{store}</b>
+          </p>
         </div>
 
-        <div className="right">
-          <a className="btn" href={adminUrl} target="_blank" rel="noreferrer">
-            Admin Panel
-          </a>
-        </div>
+        <a
+          className="admin-link"
+          href={`https://dresserp-admin.vercel.app/?store=${store}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Admin Panel
+        </a>
       </header>
 
-      {err ? (
-        <div className="error">
-          <b>Hata:</b> {err}
-          <div style={{ marginTop: 8, fontSize: 13, opacity: 0.8 }}>
-            Kontrol: Vercel env içinde <code>VITE_API_BASE</code>,{" "}
-            <code>VITE_WHATSAPP_NUMBER</code>, <code>VITE_SITE_URL</code> doğru
-            mu?
-          </div>
-        </div>
-      ) : null}
+      <div className="status-row">
+        <span className={`badge ${apiOk ? "ok" : "bad"}`}>
+          {apiOk ? "API erişiliyor" : "API erişilemiyor"}
+        </span>
 
-      <div className="actions">
-        <button className="btn" onClick={fetchProducts} disabled={loading}>
-          {loading ? "Yükleniyor..." : "Yenile"}
+        <button className="refresh-btn" onClick={loadStore}>
+          Yenile
         </button>
       </div>
 
-      <div className="grid">
-        {loading ? (
-          <div style={{ padding: 12 }}>Ürünler yükleniyor...</div>
-        ) : products.length === 0 ? (
-          <div style={{ padding: 12 }}>Ürün yok</div>
-        ) : (
-          products.map((p) => (
-            <div className="card" key={p.id}>
-              <div className="imgWrap">
-                {p.image_url ? (
-                  <img src={p.image_url} alt={p.name} />
-                ) : (
-                  <div className="noImg">Görsel Yok</div>
-                )}
-              </div>
+      {msg ? <div className="alert">{msg}</div> : null}
 
-              <div className="name">{p.name}</div>
-              <div className="price">{Number(p.price).toLocaleString("tr-TR")} ₺</div>
+      {loading ? (
+        <div className="empty">Yükleniyor...</div>
+      ) : products.length === 0 ? (
+        <div className="empty">Bu mağazada henüz ürün yok.</div>
+      ) : (
+        <section className="grid">
+          {products.map((p) => {
+            const waLink = buildWhatsappLink(
+              storeInfo.whatsapp_number,
+              p.name,
+              storeInfo.store_name
+            );
 
-              <button className="waBtn" onClick={() => openWhatsApp(p)}>
-                WhatsApp’tan Sor
-              </button>
-            </div>
-          ))
-        )}
-      </div>
+            return (
+              <article className="card" key={p.id}>
+                <div className="image-wrap">
+                  {p.image_url ? (
+                    <img src={p.image_url} alt={p.name} className="product-image" />
+                  ) : (
+                    <div className="no-image">Görsel Yok</div>
+                  )}
+                </div>
 
-      <footer className="footer">© 2026 Dresserp</footer>
+                <div className="card-body">
+                  <h3>{p.name}</h3>
+                  <div className="price">{formatPrice(p.price)}</div>
+
+                  {hasWhatsapp ? (
+                    <a
+                      href={waLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="wa-btn"
+                    >
+                      WhatsApp’tan Sor
+                    </a>
+                  ) : (
+                    <button className="wa-btn disabled" disabled>
+                      WhatsApp tanımlı değil
+                    </button>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      )}
+
+      <footer className="footer">
+        © 2026 Dresserp
+      </footer>
     </div>
   );
 }
