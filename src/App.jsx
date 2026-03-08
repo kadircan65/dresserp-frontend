@@ -3,9 +3,25 @@ import "./App.css";
 
 const API = import.meta.env.VITE_API_BASE;
 
-function getStoreFromQuery() {
-  const p = new URLSearchParams(window.location.search);
-  return (p.get("store") || "main").trim().toLowerCase();
+function getStoreSlug() {
+  const host = window.location.hostname.toLowerCase();
+
+  // localhost ve vercel preview için query param destekle
+  if (
+    host.includes("localhost") ||
+    host.includes("vercel.app")
+  ) {
+    const p = new URLSearchParams(window.location.search);
+    return (p.get("store") || "main").trim().toLowerCase();
+  }
+
+  // subdomain.dresserp.com => subdomain
+  const parts = host.split(".");
+  if (parts.length >= 3) {
+    return parts[0].trim().toLowerCase();
+  }
+
+  return "main";
 }
 
 function formatPrice(value) {
@@ -20,7 +36,7 @@ function buildWhatsappLink(number, productName, storeName) {
 }
 
 export default function App() {
-  const [store] = useState(getStoreFromQuery());
+  const [store] = useState(getStoreSlug());
   const [apiOk, setApiOk] = useState(false);
 
   const [storeInfo, setStoreInfo] = useState({
