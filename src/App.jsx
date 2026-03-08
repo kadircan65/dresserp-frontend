@@ -6,22 +6,26 @@ const API = import.meta.env.VITE_API_BASE;
 function getStoreSlug() {
   const host = window.location.hostname.toLowerCase();
 
-  // localhost ve vercel preview için query param destekle
   if (
-    host.includes("localhost") ||
+    host === "localhost" ||
+    host.startsWith("localhost:") ||
     host.includes("vercel.app")
   ) {
     const p = new URLSearchParams(window.location.search);
     return (p.get("store") || "main").trim().toLowerCase();
   }
 
-  // subdomain.dresserp.com => subdomain
-  const parts = host.split(".");
-  if (parts.length >= 3) {
-    return parts[0].trim().toLowerCase();
+  if (host === "dresserp.app" || host === "www.dresserp.app") {
+    return "main";
   }
 
-  return "main";
+  if (host.endsWith(".dresserp.app")) {
+    const sub = host.replace(".dresserp.app", "").trim().toLowerCase();
+    return sub || "main";
+  }
+
+  const p = new URLSearchParams(window.location.search);
+  return (p.get("store") || "main").trim().toLowerCase();
 }
 
 function formatPrice(value) {
